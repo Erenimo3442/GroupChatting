@@ -54,4 +54,4 @@ jobs:
           context: .
           file: ./WebAPI/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/groupchatting:latest
+          tags: ghcr.io/${{ toLowerCase(github.repository_owner) }}/groupchatting:latest
