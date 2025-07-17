@@ -54,4 +54,4 @@ jobs:
           context: .
           file: ./WebAPI/Dockerfile
           push: true
-          tags: ghcr.io/${{ toLowerCase(github.repository_owner) }}/groupchatting:latest
+          tags: ghcr.io/erenimo3442/groupchatting:latest
