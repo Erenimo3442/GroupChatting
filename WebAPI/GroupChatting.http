@@ -1,0 +1,6 @@
+@GroupChatting_HostAddress = http://localhost:5124
+
+GET {{GroupChatting_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

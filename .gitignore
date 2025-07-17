@@ -1,0 +1,21 @@
+# User-specific files
+*.user
+*.suo
+.vs/
+
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Secrets and environment-specific files
+.env
+appsettings.Development.json
+
+# Rider files
+.idea/
+
+# Mac files
+.DS_Store
+
+# Windows files
+Thumbs.db
