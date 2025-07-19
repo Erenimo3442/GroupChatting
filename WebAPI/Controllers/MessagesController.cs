@@ -9,9 +9,13 @@ namespace WebAPI.Controllers
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class MessagesController(IMessageService messageService) : ControllerBase
+    public class MessagesController(
+        IMessageService messageService,
+        IFileStorageService fileStorageService
+    ) : ControllerBase
     {
         private readonly IMessageService _messageService = messageService;
+        private readonly IFileStorageService _fileStorageService = fileStorageService;
 
         [HttpPost]
         public async Task<IActionResult> SendMessage(SendMessageDto sendMessageDto)
@@ -86,6 +90,41 @@ namespace WebAPI.Controllers
             }
 
             return NoContent();
+        }
+
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadFile([FromForm] Guid groupId, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("No file uploaded.");
+            }
+
+            var senderIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(senderIdString, out var senderId))
+            {
+                return Unauthorized();
+            }
+
+            // Save the file using the storage service
+            var fileUrl = await _fileStorageService.SaveFileAsync(
+                file.OpenReadStream(),
+                file.FileName
+            );
+
+            // Create a message DTO to send to the service
+            var messageDto = new SendMessageDto
+            {
+                GroupId = groupId,
+                Content = $"[File]: {file.FileName}",
+                FileUrl = fileUrl,
+                MimeType = file.ContentType,
+            };
+
+            // Use your existing message service to save and broadcast
+            var message = await _messageService.SendMessageAsync(messageDto, senderId);
+
+            return Ok(message);
         }
     }
 }

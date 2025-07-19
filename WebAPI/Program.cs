@@ -20,6 +20,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddSingleton<MongoMessageDbService>();
 
 // Add services to the container.
@@ -126,8 +127,9 @@ app.MapGet(
     )
     .WithName("GetWeatherForecast");
 
-app.UseAuthentication();
+app.UseStaticFiles();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

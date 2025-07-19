@@ -3,6 +3,7 @@ using System;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250717192607_GroupMemberAdded")]
+    partial class GroupMemberAdded
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -48,10 +51,6 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("GroupId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("MembershipStatus")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("text");
@@ -73,9 +72,6 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("FileUrl")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("GroupId")
                         .HasColumnType("uuid");
 
@@ -84,9 +80,6 @@ namespace Infrastructure.Migrations
 
                     b.Property<DateTime?>("LastEditedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("MimeType")
-                        .HasColumnType("text");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("timestamp with time zone");
@@ -120,21 +113,17 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Core.GroupMember", b =>
                 {
-                    b.HasOne("Core.Group", "Group")
+                    b.HasOne("Core.Group", null)
                         .WithMany("Memberships")
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Core.User", "User")
+                    b.HasOne("Core.User", null)
                         .WithMany("Memberships")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Group");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Core.Group", b =>

@@ -1,21 +1,25 @@
 services:
-  # Your ASP.NET Core Web API
   api:
     build:
       context: .
-      dockerfile: WebAPI/Dockerfile
+      dockerfile: WebAPI/Dockerfile.dev
     ports:
       - "8080:8080"
     volumes:
       - .:/src
+      - ./uploads:/app/wwwroot/uploads
+    working_dir: /src
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
       - AppSettings__Token=${JWT_SECRET}
+      - ConnectionStrings__DefaultConnection=Host=postgres-db;Database=chatdb;Username=myuser;Password=mypassword
+      - ConnectionStrings__Mongo=mongodb://mongoadmin:secret@mongo-db:27017
     depends_on:
       - postgres-db
       - mongo-db
-    command: dotnet watch run --project WebAPI/WebAPI.csproj --urls "http://+:8080"
+    command: [ "dotnet", "watch", "run", "--project", "WebAPI/WebAPI.csproj", "--urls", "http://+:8080" ]
 
   # PostgreSQL Database for relational data (Users, Groups)
   postgres-db:

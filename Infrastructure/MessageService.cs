@@ -1,19 +1,35 @@
 using Application;
 using Application.Dtos;
+using Core;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure
 {
     public class MessageService(
         MongoMessageDbService mongoMessageDbService,
-        IHubContext<ChatHub> hubContext
+        IHubContext<ChatHub> hubContext,
+        AppDbContext context
     ) : IMessageService
     {
+        private readonly AppDbContext _context = context;
         private readonly MongoMessageDbService _mongoMessageDbService = mongoMessageDbService;
         private readonly IHubContext<ChatHub> _hubContext = hubContext;
 
         public async Task<Message> SendMessageAsync(SendMessageDto sendMessageDto, Guid senderId)
         {
+            // Validate the sender is a member of the group
+            var isMember = await _context.GroupMembers.AnyAsync(gm =>
+                gm.GroupId == sendMessageDto.GroupId
+                && gm.UserId == senderId
+                && gm.MembershipStatus.Equals("Active")
+            );
+
+            if (!isMember)
+            {
+                throw new Exception("Sender is not a member of the group");
+            }
+
             var message = new Message
             {
                 Id = Guid.NewGuid(),
@@ -21,12 +37,14 @@ namespace Infrastructure
                 GroupId = sendMessageDto.GroupId,
                 UserId = senderId,
                 Timestamp = DateTime.UtcNow,
+                FileUrl = sendMessageDto.FileUrl,
+                MimeType = sendMessageDto.MimeType,
             };
 
-            // 2. Save the message to the database
+            // Save the message to the database
             await _mongoMessageDbService.CreateAsync(message);
 
-            // 3. Broadcast the new message to clients in the group
+            // Broadcast the new message to clients in the group
             // The client-side will listen for the "ReceiveMessage" event.
             await _hubContext
                 .Clients.Group(sendMessageDto.GroupId.ToString())

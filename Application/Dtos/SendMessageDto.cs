@@ -9,5 +9,8 @@ namespace Application.Dtos
 
         [Required]
         public string Content { get; set; } = string.Empty;
+
+        public string? FileUrl { get; set; } = null;
+        public string? MimeType { get; set; } = null;
     }
 }

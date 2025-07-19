@@ -1,4 +1,5 @@
 using Application.Dtos;
+using Core;
 
 namespace Application
 {
