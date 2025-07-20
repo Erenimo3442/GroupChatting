@@ -1,3 +1,4 @@
+using Application;
 using Core;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Bson;
@@ -5,7 +6,7 @@ using MongoDB.Driver;
 
 namespace Infrastructure
 {
-    public class MongoMessageDbService
+    public class MongoMessageDbService : IMongoMessageDbService
     {
         private readonly IMongoCollection<Message> _messagesCollection;
 

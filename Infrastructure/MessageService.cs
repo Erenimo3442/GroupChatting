@@ -7,13 +7,13 @@ using Microsoft.EntityFrameworkCore;
 namespace Infrastructure
 {
     public class MessageService(
-        MongoMessageDbService mongoMessageDbService,
+        IMongoMessageDbService mongoMessageDbService,
         IHubContext<ChatHub> hubContext,
         AppDbContext context
     ) : IMessageService
     {
         private readonly AppDbContext _context = context;
-        private readonly MongoMessageDbService _mongoMessageDbService = mongoMessageDbService;
+        private readonly IMongoMessageDbService _mongoMessageDbService = mongoMessageDbService;
         private readonly IHubContext<ChatHub> _hubContext = hubContext;
 
         public async Task<MessageResponseDto> SendMessageAsync(
@@ -30,7 +30,7 @@ namespace Infrastructure
 
             if (!isMember)
             {
-                throw new Exception("Sender is not a member of the group");
+                throw new UnauthorizedAccessException("Sender is not a member of the group");
             }
 
             var message = new Message

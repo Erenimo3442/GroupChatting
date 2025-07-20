@@ -50,7 +50,7 @@ namespace Infrastructure
             var inviterMember =
                 await _context.GroupMembers.FirstOrDefaultAsync(m =>
                     m.GroupId == groupId && m.UserId == inviterId
-                ) ?? throw new NotFoundException("Inviter is not a member of the group");
+                ) ?? throw new ForbiddenAccessException("Inviter is not a member of the group");
 
             if (inviterMember.Role != "Admin")
             {
@@ -190,7 +190,7 @@ namespace Infrastructure
 
             if (!group.IsPublic)
             {
-                throw new ForbiddenAccessException("Only public groups can be joined directly.");
+                throw new UnauthorizedAccessException("Only public groups can be joined directly.");
             }
 
             var groupMember = new GroupMember

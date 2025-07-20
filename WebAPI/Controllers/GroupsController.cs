@@ -34,6 +34,7 @@ namespace WebAPI.Controllers
             );
         }
 
+        [AllowAnonymous]
         [HttpGet("public")]
         public async Task<IActionResult> GetPublicGroups()
         {
