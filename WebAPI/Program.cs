@@ -14,8 +14,19 @@ BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+var pgConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var pgDatabaseUrl = builder.Configuration["DATABASE_URL"];
+if (!string.IsNullOrEmpty(pgDatabaseUrl))
+{
+    // Parse the Heroku DATABASE_URL
+    var uri = new Uri(pgDatabaseUrl);
+    var userInfo = uri.UserInfo.Split(':');
+    var user = userInfo[0];
+    var password = userInfo[1];
+    pgConnectionString =
+        $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.TrimStart('/')};User ID={user};Password={password};SslMode=Require;Trust Server Certificate=true;";
+}
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(pgConnectionString));
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -99,37 +110,6 @@ app.UseSwaggerUI();
 
 //app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing",
-    "Bracing",
-    "Chilly",
-    "Cool",
-    "Mild",
-    "Warm",
-    "Balmy",
-    "Hot",
-    "Sweltering",
-    "Scorching",
-};
-
-app.MapGet(
-        "/weatherforecast",
-        () =>
-        {
-            var forecast = Enumerable
-                .Range(1, 5)
-                .Select(index => new WeatherForecast(
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-                .ToArray();
-            return forecast;
-        }
-    )
-    .WithName("GetWeatherForecast");
-
 app.UseStaticFiles();
 
 app.UseAuthentication();
@@ -142,8 +122,3 @@ app.MapHub<ChatHub>("/chathub");
 app.Run();
 
 public partial class Program { }
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

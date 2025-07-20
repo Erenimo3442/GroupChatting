@@ -12,7 +12,11 @@ namespace Infrastructure
 
         public MongoMessageDbService(IConfiguration configuration)
         {
-            var mongoClient = new MongoClient(configuration.GetConnectionString("Mongo"));
+            // This logic now lives inside the service
+            var connectionString =
+                configuration["MONGODB_URI"] ?? configuration.GetConnectionString("Mongo");
+
+            var mongoClient = new MongoClient(connectionString);
             var mongoDatabase = mongoClient.GetDatabase("chatdb");
             _messagesCollection = mongoDatabase.GetCollection<Message>("Messages");
         }
