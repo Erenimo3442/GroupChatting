@@ -16,7 +16,10 @@ namespace Infrastructure
         private readonly MongoMessageDbService _mongoMessageDbService = mongoMessageDbService;
         private readonly IHubContext<ChatHub> _hubContext = hubContext;
 
-        public async Task<Message> SendMessageAsync(SendMessageDto sendMessageDto, Guid senderId)
+        public async Task<MessageResponseDto> SendMessageAsync(
+            SendMessageDto sendMessageDto,
+            Guid senderId
+        )
         {
             // Validate the sender is a member of the group
             var isMember = await _context.GroupMembers.AnyAsync(gm =>
@@ -44,34 +47,58 @@ namespace Infrastructure
             // Save the message to the database
             await _mongoMessageDbService.CreateAsync(message);
 
+            // Get sender username for response
+            var senderUser = await _context.Users.FindAsync(senderId);
+            var senderUsername = senderUser?.Username ?? "Unknown";
+
+            // Create response DTO
+            var responseDto = MapToResponseDto(message, senderUsername);
+
             // Broadcast the new message to clients in the group
             // The client-side will listen for the "ReceiveMessage" event.
             await _hubContext
                 .Clients.Group(sendMessageDto.GroupId.ToString())
-                .SendAsync("ReceiveMessage", message);
+                .SendAsync("ReceiveMessage", responseDto);
 
-            return message;
+            return responseDto;
         }
 
-        public async Task<List<Message>> GetMessagesAsync(
+        public async Task<List<MessageResponseDto>> GetMessagesAsync(
             Guid groupId,
-            int page,
-            int pageSize,
-            string? searchText
+            GetMessagesDto getMessagesDto
         )
         {
-            return await _mongoMessageDbService.GetMessagesAsync(
+            var messages = await _mongoMessageDbService.GetMessagesAsync(
                 groupId,
-                page,
-                pageSize,
-                searchText
+                getMessagesDto.Page,
+                getMessagesDto.PageSize,
+                getMessagesDto.SearchText
             );
+
+            // Get all unique user IDs from messages
+            var userIds = messages.Select(m => m.UserId).Distinct().ToList();
+
+            // Get usernames in a single query
+            var users = await _context
+                .Users.Where(u => userIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.Username);
+
+            // Map to response DTOs
+            var responseDtos = messages
+                .Select(message =>
+                {
+                    var senderUsername = users.GetValueOrDefault(message.UserId, "Unknown");
+                    return MapToResponseDto(message, senderUsername);
+                })
+                .ToList();
+
+            return responseDtos;
         }
 
-        public async Task<Message?> UpdateMessageAsync(
+        public async Task<MessageResponseDto?> UpdateMessageAsync(
             Guid messageId,
             Guid userId,
-            string newContent
+            UpdateMessageDto dto
         )
         {
             var message = await _mongoMessageDbService.GetByIdAsync(messageId);
@@ -81,17 +108,24 @@ namespace Infrastructure
                 return null;
             }
 
-            message.Content = newContent;
+            message.Content = dto.NewContent;
             message.LastEditedAt = DateTime.UtcNow;
 
             await _mongoMessageDbService.UpdateAsync(messageId, message);
 
+            // Get sender username for response
+            var senderUser = await _context.Users.FindAsync(userId);
+            var senderUsername = senderUser?.Username ?? "Unknown";
+
+            // Create response DTO
+            var responseDto = MapToResponseDto(message, senderUsername);
+
             // Notify clients about the updated message
             await _hubContext
                 .Clients.Group(message.GroupId.ToString())
-                .SendAsync("MessageUpdated", message);
+                .SendAsync("MessageUpdated", responseDto);
 
-            return message;
+            return responseDto;
         }
 
         public async Task<bool> DeleteMessageAsync(Guid messageId, Guid userId)
@@ -113,6 +147,23 @@ namespace Infrastructure
                 .SendAsync("MessageDeleted", messageId);
 
             return true;
+        }
+
+        private static MessageResponseDto MapToResponseDto(Message message, string senderUsername)
+        {
+            return new MessageResponseDto
+            {
+                Id = message.Id,
+                Content = message.Content,
+                Timestamp = message.Timestamp,
+                UserId = message.UserId,
+                GroupId = message.GroupId,
+                IsDeleted = message.IsDeleted,
+                LastEditedAt = message.LastEditedAt,
+                FileUrl = message.FileUrl,
+                MimeType = message.MimeType,
+                SenderUsername = senderUsername,
+            };
         }
     }
 }

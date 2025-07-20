@@ -9,19 +9,14 @@ namespace WebAPI.Controllers
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class GroupsController(IGroupService groupService) : ControllerBase
+    public class GroupsController(IGroupService groupService) : BaseApiController
     {
         private readonly IGroupService _groupService = groupService;
 
         [HttpPost]
         public async Task<IActionResult> CreateGroup(CreateGroupDto dto)
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
-            {
-                return Unauthorized();
-            }
+            var userId = CurrentUserId;
 
             var groupEntity = await _groupService.CreateGroupAsync(dto, userId);
 
@@ -42,119 +37,63 @@ namespace WebAPI.Controllers
         [HttpGet("public")]
         public async Task<IActionResult> GetPublicGroups()
         {
-            var groups = await _groupService.GetPublicGroupsAsync();
-            return Ok(groups);
+            var groupEntities = await _groupService.GetPublicGroupsAsync();
+
+            var groupResponses = groupEntities
+                .Select(g => new GroupResponseDto
+                {
+                    Id = g.Id,
+                    Name = g.Name,
+                    IsPublic = g.IsPublic,
+                })
+                .ToList();
+
+            return Ok(groupResponses);
         }
 
-        [HttpPost("{groupId}/invite/{inviteeId}")]
-        public async Task<IActionResult> InviteUserToGroup(Guid groupId, Guid inviteeId)
+        [HttpPost("{groupId}/invite")]
+        public async Task<IActionResult> InviteUserToGroup(InviteUserToGroupDto dto, Guid groupId)
         {
-            var inviterIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var inviterId = CurrentUserId;
 
-            if (
-                string.IsNullOrEmpty(inviterIdString)
-                || !Guid.TryParse(inviterIdString, out var inviterId)
-            )
-            {
-                return Unauthorized();
-            }
-
-            try
-            {
-                await _groupService.InviteUserToGroupAsync(groupId, inviterId, inviteeId);
-                return Ok("User invited successfully");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            await _groupService.InviteUserToGroupAsync(groupId, inviterId, dto);
+            return Ok(new { message = "User invited successfully." });
         }
 
         [HttpPost("{groupId}/accept")]
         public async Task<IActionResult> AcceptGroupInvitation(Guid groupId)
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = CurrentUserId;
 
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
-            {
-                return Unauthorized();
-            }
-
-            try
-            {
-                await _groupService.AcceptGroupInvitationAsync(groupId, userId);
-                return Ok("Invitation accepted successfully");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            await _groupService.AcceptGroupInvitationAsync(groupId, userId);
+            return Ok(new { message = "Invitation accepted successfully." });
         }
 
         [HttpPost("{groupId}/apply")]
         public async Task<IActionResult> ApplyToGroup(Guid groupId)
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = CurrentUserId;
 
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
-            {
-                return Unauthorized();
-            }
-
-            try
-            {
-                await _groupService.ApplyToGroupAsync(groupId, userId);
-                return Ok("Application submitted successfully");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            await _groupService.ApplyToGroupAsync(groupId, userId);
+            return Ok(new { message = "Application submitted successfully." });
         }
 
-        [HttpPost("{groupId}/approve/{applicantId}")]
-        public async Task<IActionResult> ApproveApplication(Guid groupId, Guid applicantId)
+        [HttpPost("{groupId}/approve")]
+        public async Task<IActionResult> ApproveApplication(Guid groupId, ApproveApplicationDto dto)
         {
-            var approverIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var approverId = CurrentUserId;
 
-            if (
-                string.IsNullOrEmpty(approverIdString)
-                || !Guid.TryParse(approverIdString, out var approverId)
-            )
-            {
-                return Unauthorized();
-            }
-
-            try
-            {
-                await _groupService.ApproveApplicationAsync(groupId, approverId, applicantId);
-                return Ok("Application approved successfully");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            await _groupService.ApproveApplicationAsync(groupId, approverId, dto);
+            return Ok(new { message = "Application approved successfully." });
         }
 
         [HttpPost("{groupId}/join")]
         public async Task<IActionResult> JoinPublicGroup(Guid groupId)
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = CurrentUserId;
 
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
-            {
-                return Unauthorized();
-            }
-
-            try
-            {
-                await _groupService.JoinPublicGroupAsync(groupId, userId);
-                return Ok("Joined public group successfully");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            await _groupService.JoinPublicGroupAsync(groupId, userId);
+            return Ok(new { message = "Joined public group successfully." });
         }
     }
 }

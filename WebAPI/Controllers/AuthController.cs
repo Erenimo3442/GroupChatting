@@ -6,44 +6,41 @@ namespace WebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AuthController(IUserService userService, ITokenService tokenService)
-        : ControllerBase
+    public class AuthController(IUserService userService) : ControllerBase
     {
         private readonly IUserService _userService = userService;
-        private readonly ITokenService _tokenService = tokenService;
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto registerDto)
         {
-            try
-            {
-                var user = await _userService.RegisterAsync(
-                    registerDto.Username,
-                    registerDto.Password
-                );
-                // Return a 201 Created status without the user object for security
-                return StatusCode(201, new { message = "User registered successfully." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            await _userService.RegisterAsync(registerDto);
+            return StatusCode(201, new { message = "User registered successfully." });
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto loginDto)
         {
-            var user = await _userService.LoginAsync(loginDto.Username, loginDto.Password);
+            var authResponse = await _userService.LoginAsync(loginDto);
 
-            if (user == null)
+            if (authResponse == null)
             {
                 return Unauthorized(new { message = "Invalid username or password." });
             }
 
-            // Generate and return the JWT token
-            var token = _tokenService.CreateToken(user);
+            return Ok(authResponse);
+        }
 
-            return Ok(new { token = token });
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshToken(RefreshTokenDto dto)
+        {
+            var authResponse = await _userService.RefreshTokenAsync(dto);
+
+            if (authResponse == null)
+            {
+                return Unauthorized(new { message = "Invalid refresh token." });
+            }
+
+            return Ok(authResponse);
         }
     }
 }

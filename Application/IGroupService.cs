@@ -7,7 +7,7 @@ namespace Application
     {
         Task<Group> CreateGroupAsync(CreateGroupDto dto, Guid userId);
 
-        Task InviteUserToGroupAsync(Guid groupId, Guid inviterId, Guid inviteeId);
+        Task InviteUserToGroupAsync(Guid groupId, Guid inviterId, InviteUserToGroupDto dto);
 
         Task<bool> IsUserMemberOfGroupAsync(Guid groupId, Guid userId);
 
@@ -17,7 +17,7 @@ namespace Application
 
         Task ApplyToGroupAsync(Guid groupId, Guid userId);
 
-        Task ApproveApplicationAsync(Guid groupId, Guid approverId, Guid applicantId);
+        Task ApproveApplicationAsync(Guid groupId, Guid approverId, ApproveApplicationDto dto);
 
         Task JoinPublicGroupAsync(Guid groupId, Guid userId);
     }

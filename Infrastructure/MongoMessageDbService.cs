@@ -30,10 +30,7 @@ namespace Infrastructure
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                filter &= Builders<Message>.Filter.Regex(
-                    x => x.Content,
-                    new BsonRegularExpression(searchText, "i")
-                );
+                filter &= Builders<Message>.Filter.Text(searchText);
             }
 
             return await _messagesCollection

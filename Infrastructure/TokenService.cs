@@ -11,9 +11,11 @@ namespace Infrastructure
     public class TokenService : ITokenService
     {
         private readonly SymmetricSecurityKey _key;
+        private readonly IConfiguration _config;
 
         public TokenService(IConfiguration config)
         {
+            _config = config;
             var key = config["AppSettings:Token"];
             if (string.IsNullOrEmpty(key))
             {
@@ -34,10 +36,20 @@ namespace Infrastructure
 
             var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256Signature);
 
+            if (
+                !int.TryParse(
+                    _config["AppSettings:AccessTokenLifetimeDays"],
+                    out var lifetimeInDays
+                )
+            )
+            {
+                lifetimeInDays = 7;
+            }
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddDays(7),
+                Expires = DateTime.Now.AddDays(lifetimeInDays),
                 SigningCredentials = creds,
             };
 

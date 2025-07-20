@@ -1,5 +1,6 @@
 using Application;
 using Application.Dtos;
+using Application.Exceptions;
 using Core;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,8 @@ namespace Infrastructure
                 UserId = userId,
                 Group = group,
                 User =
-                    await _context.Users.FindAsync(userId) ?? throw new Exception("User not found"),
+                    await _context.Users.FindAsync(userId)
+                    ?? throw new NotFoundException("User not found"),
                 Role = "Admin",
             };
 
@@ -30,36 +32,41 @@ namespace Infrastructure
             return group;
         }
 
-        public async Task InviteUserToGroupAsync(Guid groupId, Guid inviterId, Guid inviteeId)
+        public async Task InviteUserToGroupAsync(
+            Guid groupId,
+            Guid inviterId,
+            InviteUserToGroupDto dto
+        )
         {
             var group =
-                await _context.Groups.FindAsync(groupId) ?? throw new Exception("Group not found");
+                await _context.Groups.FindAsync(groupId)
+                ?? throw new NotFoundException("Group not found");
             var inviter =
                 await _context.Users.FindAsync(inviterId)
-                ?? throw new Exception("Inviter not found");
+                ?? throw new NotFoundException("Inviter not found");
             var invitee =
-                await _context.Users.FindAsync(inviteeId)
-                ?? throw new Exception("Invitee not found");
+                await _context.Users.FindAsync(dto.InviteeId)
+                ?? throw new NotFoundException("Invitee not found");
             var inviterMember =
                 await _context.GroupMembers.FirstOrDefaultAsync(m =>
                     m.GroupId == groupId && m.UserId == inviterId
-                ) ?? throw new Exception("Inviter is not a member of the group");
+                ) ?? throw new NotFoundException("Inviter is not a member of the group");
 
             if (inviterMember.Role != "Admin")
             {
-                throw new Exception(
+                throw new ForbiddenAccessException(
                     "Inviter does not have permission to invite users to this group"
                 );
             }
 
-            if (await IsUserMemberOfGroupAsync(groupId, inviteeId))
+            if (await IsUserMemberOfGroupAsync(groupId, dto.InviteeId))
             {
                 throw new Exception("Invitee is already a member of the group");
             }
 
             var groupMember = new GroupMember
             {
-                UserId = inviteeId,
+                UserId = dto.InviteeId,
                 GroupId = groupId,
                 Group = group,
                 User = invitee,
@@ -89,7 +96,9 @@ namespace Infrastructure
                 await _context.GroupMembers.FirstOrDefaultAsync(m =>
                     m.GroupId == groupId && m.UserId == userId && m.MembershipStatus == "Invited"
                 )
-                ?? throw new Exception("No invitation found for this user in the specified group");
+                ?? throw new NotFoundException(
+                    "No invitation found for this user in the specified group"
+                );
 
             groupMember.MembershipStatus = "Active";
             await _context.SaveChangesAsync();
@@ -98,9 +107,11 @@ namespace Infrastructure
         public async Task ApplyToGroupAsync(Guid groupId, Guid userId)
         {
             var group =
-                await _context.Groups.FindAsync(groupId) ?? throw new Exception("Group not found");
+                await _context.Groups.FindAsync(groupId)
+                ?? throw new NotFoundException("Group not found");
             var user =
-                await _context.Users.FindAsync(userId) ?? throw new Exception("User not found");
+                await _context.Users.FindAsync(userId)
+                ?? throw new NotFoundException("User not found");
 
             if (await IsUserMemberOfGroupAsync(groupId, userId))
             {
@@ -121,25 +132,30 @@ namespace Infrastructure
             await _context.SaveChangesAsync();
         }
 
-        public async Task ApproveApplicationAsync(Guid groupId, Guid approverId, Guid applicantId)
+        public async Task ApproveApplicationAsync(
+            Guid groupId,
+            Guid approverId,
+            ApproveApplicationDto dto
+        )
         {
             var group =
-                await _context.Groups.FindAsync(groupId) ?? throw new Exception("Group not found");
+                await _context.Groups.FindAsync(groupId)
+                ?? throw new NotFoundException("Group not found");
             var approver =
                 await _context.Users.FindAsync(approverId)
-                ?? throw new Exception("Approver not found");
+                ?? throw new NotFoundException("Approver not found");
             var applicant =
-                await _context.Users.FindAsync(applicantId)
-                ?? throw new Exception("Applicant not found");
+                await _context.Users.FindAsync(dto.ApplicantId)
+                ?? throw new NotFoundException("Applicant not found");
 
             var approverMember =
                 await _context.GroupMembers.FirstOrDefaultAsync(m =>
                     m.GroupId == groupId && m.UserId == approverId
-                ) ?? throw new Exception("Approver is not a member of the group");
+                ) ?? throw new NotFoundException("Approver is not a member of the group");
 
             if (approverMember.Role != "Admin")
             {
-                throw new Exception(
+                throw new ForbiddenAccessException(
                     "Approver does not have permission to approve applications for this group"
                 );
             }
@@ -147,10 +163,10 @@ namespace Infrastructure
             var applicantMember =
                 await _context.GroupMembers.FirstOrDefaultAsync(m =>
                     m.GroupId == groupId
-                    && m.UserId == applicantId
+                    && m.UserId == dto.ApplicantId
                     && m.MembershipStatus == "PendingApproval"
                 )
-                ?? throw new Exception(
+                ?? throw new NotFoundException(
                     "No pending application found for this user in the specified group"
                 );
 
@@ -161,9 +177,11 @@ namespace Infrastructure
         public async Task JoinPublicGroupAsync(Guid groupId, Guid userId)
         {
             var group =
-                await _context.Groups.FindAsync(groupId) ?? throw new Exception("Group not found");
+                await _context.Groups.FindAsync(groupId)
+                ?? throw new NotFoundException("Group not found");
             var user =
-                await _context.Users.FindAsync(userId) ?? throw new Exception("User not found");
+                await _context.Users.FindAsync(userId)
+                ?? throw new NotFoundException("User not found");
 
             if (await IsUserMemberOfGroupAsync(groupId, userId))
             {
@@ -172,7 +190,7 @@ namespace Infrastructure
 
             if (!group.IsPublic)
             {
-                throw new Exception("Group is not public and cannot be joined directly");
+                throw new ForbiddenAccessException("Only public groups can be joined directly.");
             }
 
             var groupMember = new GroupMember

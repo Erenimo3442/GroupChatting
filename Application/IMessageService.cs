@@ -5,17 +5,16 @@ namespace Application
 {
     public interface IMessageService
     {
-        Task<Message> SendMessageAsync(SendMessageDto sendMessageDto, Guid senderId);
-
-        Task<List<Message>> GetMessagesAsync(
+        Task<MessageResponseDto> SendMessageAsync(SendMessageDto sendMessageDto, Guid senderId);
+        Task<List<MessageResponseDto>> GetMessagesAsync(
             Guid groupId,
-            int page,
-            int pageSize,
-            string? searchText
+            GetMessagesDto getMessagesDto
         );
-
-        Task<Message?> UpdateMessageAsync(Guid messageId, Guid userId, string newContent);
-
+        Task<MessageResponseDto?> UpdateMessageAsync(
+            Guid messageId,
+            Guid userId,
+            UpdateMessageDto dto
+        );
         Task<bool> DeleteMessageAsync(Guid messageId, Guid userId);
     }
 }

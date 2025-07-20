@@ -8,6 +8,15 @@ services:
     volumes:
       - .:/src
       - ./uploads:/app/wwwroot/uploads
+      # Isolate the container's build folders to prevent conflicts with the host IDE
+      - /src/WebAPI/bin
+      - /src/WebAPI/obj
+      - /src/Application/bin
+      - /src/Application/obj
+      - /src/Infrastructure/bin
+      - /src/Infrastructure/obj
+      - /src/Core/bin
+      - /src/Core/obj
     working_dir: /src
     environment:
       - ASPNETCORE_ENVIRONMENT=Development

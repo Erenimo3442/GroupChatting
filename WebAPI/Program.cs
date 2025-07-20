@@ -8,6 +8,7 @@ using Microsoft.OpenApi.Models;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
+using WebAPI.Middleware;
 
 BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
 
@@ -84,6 +85,8 @@ builder
 builder.Services.AddSignalR();
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 // Configure the HTTP request pipeline.
 app.UseSwagger();

@@ -12,7 +12,7 @@ namespace WebAPI.Controllers
     public class MessagesController(
         IMessageService messageService,
         IFileStorageService fileStorageService
-    ) : ControllerBase
+    ) : BaseApiController
     {
         private readonly IMessageService _messageService = messageService;
         private readonly IFileStorageService _fileStorageService = fileStorageService;
@@ -20,111 +20,77 @@ namespace WebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> SendMessage(SendMessageDto sendMessageDto)
         {
-            var senderIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (
-                string.IsNullOrEmpty(senderIdString)
-                || !Guid.TryParse(senderIdString, out var senderId)
-            )
-            {
-                return Unauthorized();
-            }
+            var senderId = CurrentUserId;
 
-            var message = await _messageService.SendMessageAsync(sendMessageDto, senderId);
-
-            return Ok(message);
+            var responseDto = await _messageService.SendMessageAsync(sendMessageDto, senderId);
+            return Ok(responseDto);
         }
 
-        [HttpGet]
-        [Route("{groupId}")]
+        [HttpGet("{groupId}")]
         public async Task<IActionResult> GetMessages(
             Guid groupId,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10,
-            [FromQuery] string? searchText = null
+            [FromQuery] GetMessagesDto getMessagesDto
         )
         {
-            var messages = await _messageService.GetMessagesAsync(
-                groupId,
-                page,
-                pageSize,
-                searchText
-            );
-            return Ok(messages);
+            var responseDtos = await _messageService.GetMessagesAsync(groupId, getMessagesDto);
+            return Ok(responseDtos);
         }
 
         [HttpPut("{messageId}")]
-        public async Task<IActionResult> UpdateMessage(Guid messageId, [FromBody] string newContent)
+        public async Task<IActionResult> UpdateMessage(
+            Guid messageId,
+            [FromBody] UpdateMessageDto updateDto
+        )
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
-            {
-                return Unauthorized();
-            }
+            var userId = CurrentUserId;
 
-            var updatedMessage = await _messageService.UpdateMessageAsync(
+            var responseDto = await _messageService.UpdateMessageAsync(
                 messageId,
                 userId,
-                newContent
+                updateDto
             );
-            if (updatedMessage == null)
+            if (responseDto == null)
             {
                 return NotFound();
             }
 
-            return Ok(updatedMessage);
+            return Ok(responseDto);
         }
 
         [HttpDelete("{messageId}")]
         public async Task<IActionResult> DeleteMessage(Guid messageId)
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
-            {
-                return Unauthorized();
-            }
+            var userId = CurrentUserId;
 
             var isDeleted = await _messageService.DeleteMessageAsync(messageId, userId);
-            if (!isDeleted)
-            {
-                return NotFound();
-            }
-
-            return NoContent();
+            return isDeleted ? NoContent() : NotFound();
         }
 
         [HttpPost("upload")]
-        public async Task<IActionResult> UploadFile([FromForm] Guid groupId, IFormFile file)
+        public async Task<IActionResult> UploadFile([FromForm] FileUploadDto uploadDto)
         {
-            if (file == null || file.Length == 0)
-            {
+            if (uploadDto.File == null || uploadDto.File.Length == 0)
                 return BadRequest("No file uploaded.");
-            }
 
-            var senderIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(senderIdString, out var senderId))
-            {
-                return Unauthorized();
-            }
+            var senderId = CurrentUserId;
 
             // Save the file using the storage service
             var fileUrl = await _fileStorageService.SaveFileAsync(
-                file.OpenReadStream(),
-                file.FileName
+                uploadDto.File.OpenReadStream(),
+                uploadDto.File.FileName
             );
 
             // Create a message DTO to send to the service
             var messageDto = new SendMessageDto
             {
-                GroupId = groupId,
-                Content = $"[File]: {file.FileName}",
+                GroupId = uploadDto.GroupId,
+                Content = $"[File]: {uploadDto.File.FileName}",
                 FileUrl = fileUrl,
-                MimeType = file.ContentType,
+                MimeType = uploadDto.File.ContentType,
             };
 
-            // Use your existing message service to save and broadcast
-            var message = await _messageService.SendMessageAsync(messageDto, senderId);
-
-            return Ok(message);
+            var responseDto = await _messageService.SendMessageAsync(messageDto, senderId);
+            return Ok(responseDto);
         }
     }
 }

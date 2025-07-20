@@ -15,6 +15,20 @@ namespace Infrastructure
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<GroupMember>().HasKey(gm => new { gm.UserId, gm.GroupId });
+
+            // Define the relationship from GroupMember to User
+            modelBuilder
+                .Entity<GroupMember>()
+                .HasOne(gm => gm.User)
+                .WithMany(u => u.Memberships)
+                .HasForeignKey(gm => gm.UserId);
+
+            // Define the relationship from GroupMember to Group
+            modelBuilder
+                .Entity<GroupMember>()
+                .HasOne(gm => gm.Group)
+                .WithMany(g => g.Memberships)
+                .HasForeignKey(gm => gm.GroupId);
         }
     }
 }
