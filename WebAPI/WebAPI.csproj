@@ -20,4 +20,7 @@
     <ProjectReference Include="..\Application\Application.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
+  <Target Name="CreateEfbundles" AfterTargets="Publish">
+    <Exec Command="dotnet ef migrations bundle --project ../Infrastructure --startup-project . --output $(PublishDir)/efbundle --force --self-contained" />
+  </Target>
 </Project>
