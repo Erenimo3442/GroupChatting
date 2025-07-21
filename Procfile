@@ -1,2 +1,2 @@
 release: WebAPI/bin/publish/efbundle
-web: dotnet WebAPI.dll
+web: cd WebAPI/bin/publish; ./WebAPI --urls http://*:$PORT
