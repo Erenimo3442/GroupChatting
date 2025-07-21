@@ -1,2 +1,2 @@
-release: WebAPI/bin/publish/efbundleP
+release: WebAPI/bin/publish/efbundle
 web: dotnet WebAPI.dll
