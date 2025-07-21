@@ -16,6 +16,7 @@ RUN dotnet build "WebAPI.csproj" -c Release -o /app/build
 
 # Publish the app
 FROM build AS publish
+RUN dotnet tool restore
 RUN dotnet publish "WebAPI.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Use the official ASP.NET runtime image to run the app
