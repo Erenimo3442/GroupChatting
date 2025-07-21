@@ -1,2 +1,2 @@
-release: dotnet ef database update --project Infrastructure
+release: ./efbundle
 web: dotnet WebAPI.dll
