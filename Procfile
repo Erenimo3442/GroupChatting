@@ -1,2 +1,2 @@
-release: WebAPI/bin/publish/efbundle
-web: cd WebAPI/bin/publish; ./WebAPI --urls http://*:$PORT
+release: cd backend && WebAPI/bin/publish/efbundle
+web: cd backend/WebAPI/bin/publish; ./WebAPI --urls http://*:$PORT

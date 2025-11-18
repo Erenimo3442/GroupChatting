@@ -1,13 +1,14 @@
 services:
   api:
     build:
-      context: .
+      context: ./backend
       dockerfile: WebAPI/Dockerfile.dev
     ports:
       - "8080:8080"
     volumes:
-      - .:/src
-      - ./uploads:/app/wwwroot/uploads
+      - ./backend:/src
+      - ./backend/uploads:/app/wwwroot/uploads
+      - ./frontend/src/generated:/app/generated-output
       # Isolate the container's build folders to prevent conflicts with the host IDE
       - /src/WebAPI/bin
       - /src/WebAPI/obj
@@ -52,6 +53,19 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=mongoadmin
       - MONGO_INITDB_ROOT_PASSWORD=secret
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    depends_on:
+      - api
 
 volumes:
   postgres_data:

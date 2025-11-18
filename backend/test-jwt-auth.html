@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT Authentication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #results {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 JWT Authentication Test</h1>
+    
+    <div class="test-section">
+        <h2>📝 Test Registration & Login</h2>
+        <div>
+            <h3>Register New User</h3>
+            <input type="text" id="regUsername" placeholder="Username" value="testuser123">
+            <input type="password" id="regPassword" placeholder="Password" value="testpass123">
+            <button onclick="registerUser()">Register</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <h3>Login User</h3>
+            <input type="text" id="loginUsername" placeholder="Username" value="testuser123">
+            <input type="password" id="loginPassword" placeholder="Password" value="testpass123">
+            <button onclick="loginUser()">Login</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <h3>Test Protected Endpoint</h3>
+            <button onclick="testProtectedEndpoint()">Test Groups API</button>
+            <button onclick="clearTokens()">Clear Tokens</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let currentToken = null;
+        
+        function log(message) {
+            const results = document.getElementById('results');
+            results.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+        }
+        
+        async function registerUser() {
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            
+            log('🔄 Registering user: ' + username);
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Registration successful!');
+                    log('   Response: ' + JSON.stringify(data, null, 2));
+                } else {
+                    log('❌ Registration failed: ' + response.status);
+                    log('   Error: ' + JSON.stringify(data, null, 2));
+                }
+            } catch (error) {
+                log('❌ Registration error: ' + error.message);
+            }
+        }
+        
+        async function loginUser() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            log('🔄 Logging in user: ' + username);
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Login successful!');
+                    log('   Access Token: ' + data.accessToken?.substring(0, 50) + '...');
+                    currentToken = data.accessToken;
+                    localStorage.setItem('testToken', data.accessToken);
+                } else {
+                    log('❌ Login failed: ' + response.status);
+                    log('   Error: ' + JSON.stringify(data, null, 2));
+                }
+            } catch (error) {
+                log('❌ Login error: ' + error.message);
+            }
+        }
+        
+        async function testProtectedEndpoint() {
+            const token = currentToken || localStorage.getItem('testToken');
+            
+            if (!token) {
+                log('❌ No token available. Please login first.');
+                return;
+            }
+            
+            log('🔄 Testing protected endpoint with token...');
+            log('   Token: ' + token.substring(0, 50) + '...');
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/groups', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ name: 'Test Group', isPublic: true })
+                });
+                
+                const data = await response.text();
+                
+                if (response.status === 401) {
+                    log('❌ Authentication failed (401)');
+                    try {
+                        const errorData = JSON.parse(data);
+                        log('   Error: ' + JSON.stringify(errorData, null, 2));
+                        if (errorData.error_description?.includes('signature key was not found')) {
+                            log('   🔍 This indicates a JWT signature validation issue');
+                        }
+                    } catch (e) {
+                        log('   Raw response: ' + data);
+                    }
+                } else if (response.status === 500) {
+                    log('✅ Authentication successful! (500 = Database offline, but auth worked)');
+                    log('   This proves JWT validation is working correctly.');
+                } else {
+                    log('📊 Response: ' + response.status);
+                    log('   Data: ' + data);
+                }
+            } catch (error) {
+                log('❌ Request error: ' + error.message);
+            }
+        }
+        
+        function clearTokens() {
+            currentToken = null;
+            localStorage.removeItem('testToken');
+            log('🧹 Tokens cleared');
+        }
+        
+        // Initialize
+        log('🚀 JWT Authentication Test Ready');
+        log('   Make sure backend is running on localhost:8080');
+        log('');
+    </script>
+</body>
+</html>

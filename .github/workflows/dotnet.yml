@@ -17,19 +17,19 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        global-json-file: global.json
+        global-json-file: backend/global.json
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: cd backend && dotnet restore
 
     - name: Build
-      run: dotnet build --no-restore
-      
+      run: cd backend && dotnet build --no-restore
+
     - name: Lint
-      run: dotnet format --verify-no-changes
-      
+      run: cd backend && dotnet format --verify-no-changes
+
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: cd backend && dotnet test --no-build --verbosity normal
 
   deploy:
     name: Push Docker image to GitHub Packages
@@ -51,7 +51,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./WebAPI/Dockerfile
+          context: ./backend
+          file: ./backend/WebAPI/Dockerfile
           push: true
           tags: ghcr.io/erenimo3442/groupchatting:latest

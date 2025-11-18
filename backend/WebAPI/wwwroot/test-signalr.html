@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>SignalR Test Client</title>
+    <script src="https://unpkg.com/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+</head>
+
+<body>
+    <div>
+        <h2>GroupChatting SignalR Test</h2>
+
+        <div>
+            <label>JWT Token:</label>
+            <input type="text" id="tokenInput" placeholder="Paste your JWT token here" style="width: 400px;">
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()">Disconnect</button>
+        </div>
+
+        <div>
+            <h3>Join Group</h3>
+            <input type="text" id="groupIdInput" placeholder="Group ID (GUID)">
+            <button onclick="joinGroup()">Join Group</button>
+        </div>
+
+        <div>
+            <h3>Send Message</h3>
+            <input type="text" id="messageInput" placeholder="Type your message">
+            <button onclick="sendMessage()">Send Message</button>
+        </div>
+
+        <div>
+            <h3>Connection Status</h3>
+            <div id="status">Disconnected</div>
+        </div>
+
+        <div>
+            <h3>Messages</h3>
+            <div id="messagesList" style="border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px;">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let connection = null;
+        let currentGroupId = null;
+
+        async function connect() {
+            const token = document.getElementById('tokenInput').value;
+            if (!token) {
+                alert('Please enter a JWT token first');
+                return;
+            }
+
+            console.log('Attempting to connect with token...');
+
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chathub", {
+                    accessTokenFactory: () => token
+                })
+                .configureLogging(signalR.LogLevel.Debug)
+                .build();
+
+            // Set up event handlers
+            connection.on("ReceiveMessage", function (messageDto) {
+                const messagesList = document.getElementById('messagesList');
+                const messageElement = document.createElement('div');
+                messageElement.innerHTML = `
+                    <strong>${messageDto.senderUsername || 'Unknown'}:</strong> 
+                    ${messageDto.content} 
+                    <small>(${new Date(messageDto.timestamp).toLocaleTimeString()})</small>
+                `;
+                messagesList.appendChild(messageElement);
+                messagesList.scrollTop = messagesList.scrollHeight;
+            });
+
+            connection.on("MessageUpdated", function (messageDto) {
+                addToMessagesList(`📝 Message updated: ${messageDto.content}`);
+            });
+
+            connection.on("MessageDeleted", function (messageId) {
+                addToMessagesList(`🗑️ Message deleted: ${messageId}`);
+            });
+
+            connection.on("Error", function (error) {
+                addToMessagesList(`❌ Error: ${error}`);
+            });
+
+            // Add connection state debugging
+            connection.onclose((error) => {
+                console.log('Connection closed:', error);
+                document.getElementById('status').textContent = 'Connection Closed ❌';
+            });
+
+            connection.onreconnecting((error) => {
+                console.log('Connection reconnecting:', error);
+                document.getElementById('status').textContent = 'Reconnecting...';
+            });
+
+            connection.onreconnected((connectionId) => {
+                console.log('Connection reconnected:', connectionId);
+                document.getElementById('status').textContent = 'Reconnected ✅';
+            });
+
+            try {
+                console.log('Starting SignalR connection...');
+                await connection.start();
+                console.log('SignalR connection state:', connection.state);
+                document.getElementById('status').textContent = 'Connected ✅';
+                console.log("SignalR Connected");
+            } catch (err) {
+                console.error('SignalR connection error:', err);
+                document.getElementById('status').textContent = 'Connection Failed ❌';
+                console.error(err);
+                alert('Connection failed: ' + err.message);
+            }
+        }
+
+        async function disconnect() {
+            if (connection) {
+                await connection.stop();
+                document.getElementById('status').textContent = 'Disconnected';
+                console.log("SignalR Disconnected");
+            }
+        }
+
+        async function joinGroup() {
+            if (!connection) {
+                alert('Please connect first');
+                return;
+            }
+
+            const groupId = document.getElementById('groupIdInput').value;
+            if (!groupId) {
+                alert('Please enter a group ID');
+                return;
+            }
+
+            try {
+                await connection.invoke("JoinGroup", groupId);
+                currentGroupId = groupId;
+                addToMessagesList(`✅ Joined group: ${groupId}`);
+            } catch (err) {
+                console.error(err);
+                addToMessagesList(`❌ Failed to join group: ${err.message}`);
+            }
+        }
+
+        function addToMessagesList(message) {
+            const messagesList = document.getElementById('messagesList');
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            messagesList.appendChild(messageElement);
+            messagesList.scrollTop = messagesList.scrollHeight;
+        }
+
+        // Optional: Add a simple send message function for testing
+        async function sendMessage() {
+            const message = document.getElementById('messageInput').value;
+            if (!message || !currentGroupId) {
+                alert('Please join a group and enter a message');
+                return;
+            }
+
+            // This would require implementing a SendMessage method in your ChatHub
+            try {
+                await connection.invoke("SendMessageToGroup", currentGroupId, message);
+                document.getElementById('messageInput').value = '';
+            } catch (err) {
+                console.error(err);
+                addToMessagesList(`❌ Failed to send message: ${err.message}`);
+            }
+        }
+    </script>
+</body>
+
+</html>
