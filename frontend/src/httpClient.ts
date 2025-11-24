@@ -4,7 +4,6 @@ class ApiClient {
     private getAuthHeaders(): Record<string, string> {
         const token = localStorage.getItem('accessToken');
         return {
-            "Content-Type": "application/json",
             ...(token ? { "Authorization": `Bearer ${token}` } : {})
         }
     }
@@ -30,12 +29,8 @@ class ApiClient {
     }
 
     // Custom fetch method that integrates with NSwag generated clients
-    async fetch(url: string, init?: RequestInit): Promise<Response> {
-        const token = localStorage.getItem('accessToken');
-        const authHeaders = {
-            "Content-Type": "application/json",
-            ...(token ? { "Authorization": `Bearer ${token}` } : {})
-        };
+    fetch = async (url: string, init?: RequestInit): Promise<Response> => {
+        const authHeaders = this.getAuthHeaders();
 
         const headers = {
             ...authHeaders,

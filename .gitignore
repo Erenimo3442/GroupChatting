@@ -10,9 +10,17 @@
 # Secrets and environment-specific files
 .env
 appsettings.Development.json
+.claude
+.clinerules
+.vscode
+.project_context
+backend/docs/
 
 # Rider files
 .idea/
+
+# wwwroot folder
+wwwroot/
 
 # Mac files
 .DS_Store

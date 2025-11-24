@@ -7,5 +7,7 @@ namespace Application.Dtos
     {
         [Required]
         public IFormFile File { get; set; } = null!;
+
+        public string? Content { get; set; }
     }
 }

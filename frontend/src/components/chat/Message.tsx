@@ -6,14 +6,20 @@ interface MessageProps {
     timestamp: Date | string;
     isEdited: boolean;
     isOwn?: boolean;
+    hasFile?: boolean;        // ← ADD
+    fileUrl?: string;         // ← ADD
+    mimeType?: string;        // ← ADD
 }
 
-const Message = React.memo<MessageProps>(({ 
-    content, 
+const Message = React.memo<MessageProps>(({
+    content,
     senderUsername,
-    timestamp, 
+    timestamp,
     isEdited,
-    isOwn = false
+    isOwn = false,
+    hasFile = false,          // ← ADD
+    fileUrl,                  // ← ADD
+    mimeType                  // ← ADD
 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -31,78 +37,80 @@ const Message = React.memo<MessageProps>(({
         }
     };
 
-    const handleMessageClick = () => {
-        setIsExpanded(!isExpanded);
-    };
+    const isImage = mimeType?.startsWith('image/');
+    const fullFileUrl = fileUrl?.startsWith('http') ? fileUrl : `http://localhost:8080${fileUrl}`;
 
     return (
-        <div 
-            className={`group relative mb-3 p-3 rounded-lg transition-all duration-200 ${
-                isOwn 
-                    ? 'bg-blue-50 ml-8 border-l-4 border-blue-400' 
-                    : 'bg-gray-50 mr-8 border-l-4 border-gray-300'
-            } hover:shadow-md`}
+        <div
+            className={`flex w-full mb-4 ${isOwn ? 'justify-end' : 'justify-start'}`}
             role="article"
-            aria-label={`Message from ${senderUsername} at ${formatTimestamp(timestamp)}`}
         >
-            <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-semibold text-gray-600">
-                        {senderUsername.charAt(0).toUpperCase()}
+            <div className={`flex max-w-[80%] ${isOwn ? 'flex-row-reverse' : 'flex-row'} gap-3`}>
+                {/* Avatar */}
+                <div className={`
+                    flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-lg
+                    ${isOwn
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-700 text-zinc-300'
+                    }
+                `}>
+                    {senderUsername.charAt(0).toUpperCase()}
+                </div>
+
+                {/* Message Content */}
+                <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+                    <div className="flex items-baseline gap-2 mb-1 px-1">
+                        <span className={`text-xs font-medium ${isOwn ? 'text-indigo-400' : 'text-zinc-400'}`}>
+                            {senderUsername}
+                        </span>
+                        <span className="text-[10px] text-zinc-600">
+                            {formatTimestamp(timestamp)}
+                        </span>
                     </div>
-                    <span className={`font-semibold text-sm ${
-                        isOwn ? 'text-blue-700' : 'text-gray-700'
-                    }`}>
-                        {senderUsername}
-                    </span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">
-                        {formatTimestamp(timestamp)}
-                    </span>
-                    {isEdited && (
-                        <span className="text-xs text-gray-400 italic">(edited)</span>
-                    )}
-                </div>
-            </div>
-            
-            <div 
-                className={`text-sm leading-relaxed ${
-                    isExpanded ? '' : 'line-clamp-3'
-                } cursor-pointer`}
-                onClick={handleMessageClick}
-                title={isExpanded ? 'Click to collapse' : 'Click to expand'}
-            >
-                {content}
-            </div>
 
-            {content.length > 100 && (
-                <button
-                    onClick={handleMessageClick}
-                    className="text-xs text-blue-500 hover:text-blue-700 mt-1 underline"
-                    aria-expanded={isExpanded}
-                    aria-controls="message-content"
-                >
-                    {isExpanded ? 'Show less' : 'Show more'}
-                </button>
-            )}
+                    <div
+                        className={`
+                            relative px-4 py-2.5 rounded-2xl shadow-md text-sm leading-relaxed break-words
+                            ${isOwn
+                                ? 'bg-indigo-600 text-white rounded-tr-none'
+                                : 'bg-zinc-800 text-zinc-200 rounded-tl-none border border-zinc-700'
+                            }
+                        `}
+                    >
 
-            <div className="absolute -right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <div className="flex gap-1">
-                    <button
-                        className="p-1 bg-gray-200 rounded hover:bg-gray-300 text-gray-600 text-xs"
-                        title="React to message"
-                        aria-label="React to message"
-                    >
-                        😊
-                    </button>
-                    <button
-                        className="p-1 bg-gray-200 rounded hover:bg-gray-300 text-gray-600 text-xs"
-                        title="Reply to message"
-                        aria-label="Reply to message"
-                    >
-                        ↩️
-                    </button>
+                        {/* File Attachment Rendering */}
+                        {hasFile && fileUrl && (
+                            <div className="mb-2">
+                                {isImage ? (
+                                    <a href={fullFileUrl} target="_blank" rel="noopener noreferrer">
+                                        <img 
+                                            src={fullFileUrl} 
+                                            alt="Uploaded file"
+                                            className="max-w-sm max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition"
+                                        />
+                                    </a>
+                                ) : (
+                                    <a 
+                                        href={fullFileUrl} 
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 p-3 bg-black/20 rounded-lg hover:bg-black/30 transition"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <span className="text-sm">View File</span>
+                                    </a>
+                                )}
+                            </div>
+                        )}
+                        {content}
+                        {isEdited && (
+                            <span className="text-[10px] opacity-60 italic ml-2 block text-right">
+                                (edited)
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

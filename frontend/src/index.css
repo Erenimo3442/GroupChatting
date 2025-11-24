@@ -1,67 +1,53 @@
 @import "tailwindcss";
 
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  background-color: #242424;
-  color: rgba(255, 255, 255, 0.87);
+@layer base {
+  :root {
+    --color-bg-primary: #09090b; /* Zinc 950 */
+    --color-bg-secondary: #18181b; /* Zinc 900 */
+    --color-bg-tertiary: #27272a; /* Zinc 800 */
+    --color-accent: #6366f1; /* Indigo 500 */
+    --color-accent-hover: #4f46e5; /* Indigo 600 */
+    --color-text-primary: #f4f4f5; /* Zinc 100 */
+    --color-text-secondary: #a1a1aa; /* Zinc 400 */
+  }
+
+  body {
+    @apply bg-zinc-950 text-zinc-100 font-sans antialiased;
+  }
 }
 
-.auth-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+@layer components {
+  .glass-panel {
+    @apply bg-zinc-900/70 backdrop-blur-md border border-zinc-800/50;
+  }
+  
+  .input-field {
+    @apply w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200 shadow-lg shadow-indigo-500/20 active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium py-2.5 px-4 rounded-lg transition-all duration-200 border border-zinc-700;
+  }
 }
 
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 2rem;
-  background-color: #333;
-  border-radius: 8px;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
 }
 
-.auth-button {
-  padding: 0.75rem;
-  border: none;
-  border-radius: 4px;
-  background-color: #646cff;
-  color: white;
-  cursor: pointer;
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-700 rounded-full;
 }
 
-.toggle-auth {
-  color: #a9a9a9;
-  cursor: pointer;
-  text-align: center;
-  font-size: 0.9rem;
-}
-
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background-color: #333;
-}
-
-.auth-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.logout-button {
-  padding: 0.75rem;
-  border: none;
-  border-radius: 4px;
-  background-color: #646cff;
-  color: white;
-  cursor: pointer;
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-zinc-600;
 }

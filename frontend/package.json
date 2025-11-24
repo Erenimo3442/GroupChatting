@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@microsoft/signalr": "^10.0.0",
     "@tailwindcss/vite": "^4.1.12",
     "axios": "^1.11.0",
     "jwt-decode": "^4.0.0",
@@ -31,5 +32,10 @@
     "globals": "^16.3.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.0"
-  }
+  },
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "main": "eslint.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

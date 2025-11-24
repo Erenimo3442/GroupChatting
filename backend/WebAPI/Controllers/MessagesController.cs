@@ -74,32 +74,63 @@ namespace WebAPI.Controllers
         }
 
         [HttpPost("upload")]
+        [Consumes("multipart/form-data")]
         public async Task<ActionResult<MessageResponseDto>> UploadFile(
             [FromRoute] Guid groupId,
-            [FromForm] FileUploadDto uploadDto
+            IFormFile file,
+            string? content = null
         )
         {
-            if (uploadDto.File == null || uploadDto.File.Length == 0)
+            if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
 
             var senderId = CurrentUserId;
 
             // Save the file using the storage service
             var fileUrl = await _fileStorageService.SaveFileAsync(
-                uploadDto.File.OpenReadStream(),
-                uploadDto.File.FileName
+                file.OpenReadStream(),
+                file.FileName
             );
+
+            var providedContent = string.IsNullOrWhiteSpace(content)
+                ? $"[File]: {file.FileName}"
+                : content.Trim();
 
             // Create a message DTO to send to the service
             var messageDto = new SendMessageDto
             {
-                Content = $"[File]: {uploadDto.File.FileName}",
+                Content = providedContent,
                 FileUrl = fileUrl,
-                MimeType = uploadDto.File.ContentType,
+                MimeType = file.ContentType,
             };
 
             var responseDto = await _messageService.SendMessageAsync(groupId, messageDto, senderId);
             return Ok(responseDto);
+        }
+
+        [HttpGet("download/{messageId}")]
+        public async Task<IActionResult> DownloadFile(Guid messageId)
+        {
+            var userId = CurrentUserId;
+
+            try
+            {
+                var fileResponse = await _messageService.DownloadFileAsync(messageId, userId);
+
+                return File(
+                    fileResponse.FileStream,
+                    fileResponse.ContentType,
+                    fileResponse.FileName
+                );
+            }
+            catch (Exception ex) when (ex.Message.Contains("not found"))
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex) when (ex.Message.Contains("must be a member"))
+            {
+                return Forbid();
+            }
         }
     }
 }

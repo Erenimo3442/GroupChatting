@@ -8,7 +8,7 @@ export const getGroups = async (): Promise<GroupResponseDto[]> => {
     return groupsClient.public();
 };
 
-export const createGroup = async (groupData: { name: string; isPublic?: boolean; }) => {
+export const createGroup = async (groupData: { name: string; isPublic?: boolean; }): Promise<GroupResponseDto> => {
     const createGroupDto = new CreateGroupDto({
         name: groupData.name,
         isPublic: groupData.isPublic ?? true

@@ -8,6 +8,7 @@ using Microsoft.OpenApi.Models;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
+using WebAPI.Filters;
 using WebAPI.Middleware;
 
 BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
@@ -71,6 +72,8 @@ builder.Services.AddSwaggerGen(options =>
             },
         }
     );
+
+    options.OperationFilter<FileUploadOperationFilter>();
 });
 
 builder.Services.AddControllers();
@@ -108,15 +111,20 @@ builder
         };
     });
 
-builder.Services.AddSignalR();
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(
         "AllowMyOrigin",
-        builder => builder.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod()
+        builder =>
+            builder
+                .WithOrigins("http://localhost:3000")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials()
     );
 });
+
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 

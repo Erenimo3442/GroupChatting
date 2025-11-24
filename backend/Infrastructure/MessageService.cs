@@ -10,12 +10,16 @@ namespace Infrastructure
     public class MessageService(
         IMongoMessageDbService mongoMessageDbService,
         IHubContext<ChatHub> hubContext,
-        AppDbContext context
+        AppDbContext context,
+        IFileStorageService fileStorageService,
+        IGroupService groupService
     ) : IMessageService
     {
         private readonly AppDbContext _context = context;
         private readonly IMongoMessageDbService _mongoMessageDbService = mongoMessageDbService;
         private readonly IHubContext<ChatHub> _hubContext = hubContext;
+        private readonly IFileStorageService _fileStorageService = fileStorageService;
+        private readonly IGroupService _groupService = groupService;
 
         public async Task<MessageResponseDto> SendMessageAsync(
             Guid groupId,
@@ -149,6 +153,33 @@ namespace Infrastructure
                 .SendAsync("MessageDeleted", messageId);
 
             return true;
+        }
+
+        public async Task<FileDownloadResponseDto> DownloadFileAsync(Guid messageId, Guid userId)
+        {
+            var message = await _mongoMessageDbService.GetByIdAsync(messageId);
+
+            if (message == null)
+            {
+                throw new NotFoundException("Message not found.");
+            }
+
+            if (string.IsNullOrEmpty(message.FileUrl))
+            {
+                throw new NotFoundException("No file attached to this message.");
+            }
+
+            // Verify user is a member of the group
+            var isMember = await _groupService.IsUserMemberOfGroupAsync(message.GroupId, userId);
+            if (!isMember)
+            {
+                throw new ForbiddenAccessException(
+                    "You must be a member of the group to download this file."
+                );
+            }
+
+            // Retrieve the file from storage with message timestamp for proper naming
+            return await _fileStorageService.GetFileAsync(message.FileUrl, message.Timestamp);
         }
 
         private static MessageResponseDto MapToResponseDto(Message message, string senderUsername)

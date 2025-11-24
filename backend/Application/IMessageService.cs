@@ -20,5 +20,7 @@ namespace Application
             UpdateMessageDto dto
         );
         Task<bool> DeleteMessageAsync(Guid messageId, Guid userId);
+
+        Task<FileDownloadResponseDto> DownloadFileAsync(Guid messageId, Guid userId);
     }
 }

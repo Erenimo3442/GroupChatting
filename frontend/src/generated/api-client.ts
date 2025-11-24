@@ -21,7 +21,7 @@ export class Client {
      * @param body (optional) 
      * @return OK
      */
-    register(body: RegisterDto | undefined): Promise<void> {
+    register(body?: RegisterDto | undefined): Promise<void> {
         let url_ = this.baseUrl + "/api/Auth/register";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -59,7 +59,7 @@ export class Client {
      * @param body (optional) 
      * @return OK
      */
-    login(body: LoginDto | undefined): Promise<AuthResponseDto> {
+    login(body?: LoginDto | undefined): Promise<AuthResponseDto> {
         let url_ = this.baseUrl + "/api/Auth/login";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -101,7 +101,7 @@ export class Client {
      * @param body (optional) 
      * @return OK
      */
-    refresh(body: RefreshTokenDto | undefined): Promise<AuthResponseDto> {
+    refresh(body?: RefreshTokenDto | undefined): Promise<AuthResponseDto> {
         let url_ = this.baseUrl + "/api/Auth/refresh";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -141,9 +141,9 @@ export class Client {
 
     /**
      * @param body (optional) 
-     * @return OK
+     * @return Created
      */
-    groups(body: CreateGroupDto | undefined): Promise<GroupResponseDto> {
+    groups(body?: CreateGroupDto | undefined): Promise<GroupResponseDto> {
         let url_ = this.baseUrl + "/api/Groups";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -166,12 +166,19 @@ export class Client {
     protected processGroups(response: Response): Promise<GroupResponseDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
+        if (status === 201) {
             return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = GroupResponseDto.fromJS(resultData200);
-            return result200;
+            let result201: any = null;
+            let resultData201 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result201 = GroupResponseDto.fromJS(resultData201);
+            return result201;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -229,7 +236,7 @@ export class Client {
      * @param body (optional) 
      * @return OK
      */
-    invite(groupId: string, body: InviteUserToGroupDto | undefined): Promise<void> {
+    invite(groupId: string, body?: InviteUserToGroupDto | undefined): Promise<void> {
         let url_ = this.baseUrl + "/api/Groups/{groupId}/invite";
         if (groupId === undefined || groupId === null)
             throw new globalThis.Error("The parameter 'groupId' must be defined.");
@@ -342,7 +349,7 @@ export class Client {
      * @param body (optional) 
      * @return OK
      */
-    approve(groupId: string, body: ApproveApplicationDto | undefined): Promise<void> {
+    approve(groupId: string, body?: ApproveApplicationDto | undefined): Promise<void> {
         let url_ = this.baseUrl + "/api/Groups/{groupId}/approve";
         if (groupId === undefined || groupId === null)
             throw new globalThis.Error("The parameter 'groupId' must be defined.");
@@ -419,7 +426,7 @@ export class Client {
      * @param body (optional) 
      * @return OK
      */
-    messagesPOST(groupId: string, body: SendMessageDto | undefined): Promise<MessageResponseDto> {
+    messagesPOST(groupId: string, body?: SendMessageDto | undefined): Promise<MessageResponseDto> {
         let url_ = this.baseUrl + "/api/groups/{groupId}/messages";
         if (groupId === undefined || groupId === null)
             throw new globalThis.Error("The parameter 'groupId' must be defined.");
@@ -466,7 +473,7 @@ export class Client {
      * @param searchText (optional) 
      * @return OK
      */
-    messagesAll(groupId: string, page: number | undefined, pageSize: number | undefined, searchText: string | undefined): Promise<MessageResponseDto[]> {
+    messagesAll(groupId: string, page?: number | undefined, pageSize?: number | undefined, searchText?: string | undefined): Promise<MessageResponseDto[]> {
         let url_ = this.baseUrl + "/api/groups/{groupId}/messages?";
         if (groupId === undefined || groupId === null)
             throw new globalThis.Error("The parameter 'groupId' must be defined.");
@@ -526,7 +533,7 @@ export class Client {
      * @param body (optional) 
      * @return OK
      */
-    messagesPUT(messageId: string, groupId: string, body: UpdateMessageDto | undefined): Promise<MessageResponseDto> {
+    messagesPUT(messageId: string, groupId: string, body?: UpdateMessageDto | undefined): Promise<MessageResponseDto> {
         let url_ = this.baseUrl + "/api/groups/{groupId}/messages/{messageId}";
         if (messageId === undefined || messageId === null)
             throw new globalThis.Error("The parameter 'messageId' must be defined.");
@@ -610,10 +617,11 @@ export class Client {
     }
 
     /**
-     * @param file (optional) 
+     * @param file (optional) The file to upload
+     * @param content (optional) Optional text content
      * @return OK
      */
-    upload(groupId: string, file: FileParameter | undefined): Promise<MessageResponseDto> {
+    upload(groupId: string, file?: FileParameter | undefined, content?: string | null | undefined): Promise<MessageResponseDto> {
         let url_ = this.baseUrl + "/api/groups/{groupId}/messages/upload";
         if (groupId === undefined || groupId === null)
             throw new globalThis.Error("The parameter 'groupId' must be defined.");
@@ -624,7 +632,9 @@ export class Client {
         if (file === null || file === undefined)
             throw new globalThis.Error("The parameter 'file' cannot be null.");
         else
-            content_.append("File", file.data, file.fileName ? file.fileName : "File");
+            content_.append("file", file.data, file.fileName ? file.fileName : "file");
+        if (content !== null && content !== undefined)
+            content_.append("content", content.toString());
 
         let options_: RequestInit = {
             body: content_,
@@ -655,6 +665,45 @@ export class Client {
             });
         }
         return Promise.resolve<MessageResponseDto>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    download(messageId: string, groupId: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/groups/{groupId}/messages/download/{messageId}";
+        if (messageId === undefined || messageId === null)
+            throw new globalThis.Error("The parameter 'messageId' must be defined.");
+        url_ = url_.replace("{messageId}", encodeURIComponent("" + messageId));
+        if (groupId === undefined || groupId === null)
+            throw new globalThis.Error("The parameter 'groupId' must be defined.");
+        url_ = url_.replace("{groupId}", encodeURIComponent("" + groupId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processDownload(_response);
+        });
+    }
+
+    protected processDownload(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
     }
 }
 
@@ -972,6 +1021,70 @@ export interface IMessageResponseDto {
     senderUsername: string;
     isEdited: boolean;
     hasFile: boolean;
+}
+
+export class ProblemDetails implements IProblemDetails {
+    type?: string | undefined;
+    title?: string | undefined;
+    status?: number | undefined;
+    detail?: string | undefined;
+    instance?: string | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: IProblemDetails) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.type = _data["type"];
+            this.title = _data["title"];
+            this.status = _data["status"];
+            this.detail = _data["detail"];
+            this.instance = _data["instance"];
+        }
+    }
+
+    static fromJS(data: any): ProblemDetails {
+        data = typeof data === 'object' ? data : {};
+        let result = new ProblemDetails();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["type"] = this.type;
+        data["title"] = this.title;
+        data["status"] = this.status;
+        data["detail"] = this.detail;
+        data["instance"] = this.instance;
+        return data;
+    }
+}
+
+export interface IProblemDetails {
+    type?: string | undefined;
+    title?: string | undefined;
+    status?: number | undefined;
+    detail?: string | undefined;
+    instance?: string | undefined;
+
+    [key: string]: any;
 }
 
 export class RefreshTokenDto implements IRefreshTokenDto {

@@ -13,7 +13,11 @@ namespace WebAPI.Controllers
     {
         private readonly IGroupService _groupService = groupService;
 
+        /// <response code="201">Returns the newly created item</response>
+        /// <response code="400">If the item is null</response>
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<GroupResponseDto>> CreateGroup(CreateGroupDto dto)
         {
             var userId = CurrentUserId;
