@@ -3,7 +3,7 @@ import Auth from './components/auth/Auth';
 import Header from './components/common/Header';
 import Sidebar from './components/common/Sidebar';
 import ChatWindow from './components/chat/ChatWindow';
-import { clearTokens, hasTokens } from './utils/clearTokens';
+import { TOKENS_UPDATED_EVENT, clearTokens, getAccessToken, hasTokens, saveTokens } from './utils/clearTokens';
 import { isTokenValid, willTokenExpireSoon } from './utils/jwtUtils';
 import { signalRService, SignalRService } from './services/signalr';
 
@@ -13,33 +13,46 @@ interface LoginResponse {
 }
 
 export default function App() {
-  const [token, setToken] = useState(localStorage.getItem('accessToken'));
+  const [token, setToken] = useState(getAccessToken());
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const connectionRef = useRef<SignalRService | null>(null);
 
   useEffect(() => {
-    if (token && hasTokens()) {
-      const validateToken = () => {
-        try {
-          if (!isTokenValid(token)) {
-            setAuthError('Invalid or expired token. Please login again.');
-            console.error('JWT Token is invalid or expired');
-            return;
-          }
-
-          if (willTokenExpireSoon(token)) {
-            console.warn('Token will expire soon. Consider refreshing.');
-          }
-        } catch (error) {
-          console.error('JWT Token validation error:', error);
-          setAuthError('Token validation failed. Please login again.');
-        }
-      };
-
-      validateToken();
+    if (!token || !hasTokens()) {
+      return;
     }
+
+    const validateToken = () => {
+      try {
+        if (!isTokenValid(token)) {
+          setAuthError('Invalid or expired token. Please login again.');
+          console.error('JWT Token is invalid or expired');
+          return;
+        }
+
+        if (willTokenExpireSoon(token)) {
+          console.warn('Token will expire soon. Attempting refresh automatically.');
+        }
+      } catch (error) {
+        console.error('JWT Token validation error:', error);
+        setAuthError('Token validation failed. Please login again.');
+      }
+    };
+
+    validateToken();
   }, [token]);
+
+  useEffect(() => {
+    const handleTokensUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ accessToken: string | null } | undefined>;
+      const updatedToken = customEvent.detail?.accessToken ?? null;
+      setToken(updatedToken);
+    };
+
+    window.addEventListener(TOKENS_UPDATED_EVENT, handleTokensUpdated as EventListener);
+    return () => window.removeEventListener(TOKENS_UPDATED_EVENT, handleTokensUpdated as EventListener);
+  }, []);
 
   useEffect(() => {
     if (!token ||
@@ -59,14 +72,13 @@ export default function App() {
   }, [token]);
 
   const handleLoginSuccess = (data: LoginResponse) => {
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+    saveTokens(data.accessToken, data.refreshToken);
     setToken(data.accessToken);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    connectionRef.current?.stopConnection();
+    clearTokens();
     setToken(null);
     setSelectedGroupId(null);
   };

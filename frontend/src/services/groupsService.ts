@@ -1,8 +1,9 @@
 import { Client, CreateGroupDto } from "../generated/api-client";
 import { fetch } from "../httpClient";
 import type { GroupResponseDto } from "../generated/api-client";
+import { API_BASE_URL } from "../config";
 
-const groupsClient = new Client("http://localhost:8080", { fetch });
+const groupsClient = new Client(API_BASE_URL, { fetch });
 
 export const getGroups = async (): Promise<GroupResponseDto[]> => {
     return groupsClient.public();
