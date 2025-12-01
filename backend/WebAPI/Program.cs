@@ -17,18 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
 
-var pgConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-var pgDatabaseUrl = builder.Configuration["DATABASE_URL"];
-if (!string.IsNullOrEmpty(pgDatabaseUrl))
-{
-    // Parse the Heroku DATABASE_URL
-    var uri = new Uri(pgDatabaseUrl);
-    var userInfo = uri.UserInfo.Split(':');
-    var user = userInfo[0];
-    var password = userInfo[1];
-    pgConnectionString =
-        $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.TrimStart('/')};User ID={user};Password={password};SslMode=Require;Trust Server Certificate=true;";
-}
+var pgConnectionString = BuildPostgresConnectionString(builder.Configuration);
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(pgConnectionString));
 
 builder.Services.AddScoped<IUserService, UserService>();
@@ -116,12 +105,30 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(
         "AllowMyOrigin",
-        builder =>
-            builder
-                .WithOrigins("http://localhost:3000")
+        policyBuilder =>
+        {
+            var allowedOrigins = builder.Configuration
+                .GetSection("Cors:AllowedOrigins")
+                .Get<string[]>() ?? Array.Empty<string>();
+
+            var originsFromEnv = builder.Configuration["CORS_ORIGINS"];
+            if (!string.IsNullOrWhiteSpace(originsFromEnv))
+            {
+                allowedOrigins = originsFromEnv
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            }
+
+            if (allowedOrigins.Length == 0)
+            {
+                allowedOrigins = new[] { "http://localhost:3000" };
+            }
+
+            policyBuilder
+                .WithOrigins(allowedOrigins)
                 .AllowAnyHeader()
                 .AllowAnyMethod()
-                .AllowCredentials()
+                .AllowCredentials();
+        }
     );
 });
 
@@ -157,3 +164,26 @@ app.MapHub<ChatHub>("/chathub");
 app.Run();
 
 public partial class Program { }
+
+static string BuildPostgresConnectionString(ConfigurationManager configuration)
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException("DefaultConnection is not configured.");
+    }
+
+    var pgDatabaseUrl = configuration["DATABASE_URL"];
+    if (string.IsNullOrEmpty(pgDatabaseUrl))
+    {
+        return connectionString;
+    }
+
+    var uri = new Uri(pgDatabaseUrl);
+    var userInfo = uri.UserInfo.Split(':');
+    var user = userInfo[0];
+    var password = userInfo[1];
+
+    return
+        $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.TrimStart('/')};User ID={user};Password={password};SslMode=Require;Trust Server Certificate=true;";
+}

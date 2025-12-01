@@ -1,4 +1,5 @@
 import * as signalR from '@microsoft/signalr';
+import { SIGNALR_HUB_URL } from '../config';
 
 export class SignalRService {
     private connection: signalR.HubConnection | null = null;
@@ -28,7 +29,7 @@ export class SignalRService {
 
         if (!this.connection) {
             this.connection = new signalR.HubConnectionBuilder()
-                .withUrl('http://localhost:8080/chathub', {
+                .withUrl(SIGNALR_HUB_URL, {
                     accessTokenFactory: () => this.token || '',
                 })
                 .withAutomaticReconnect()

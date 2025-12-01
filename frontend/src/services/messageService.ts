@@ -1,8 +1,9 @@
 import { Client, SendMessageDto } from "../generated/api-client";
 import { fetch } from "../httpClient";
 import type { FileParameter, MessageResponseDto } from "../generated/api-client";
+import { API_BASE_URL } from "../config";
 
-const messagesClient = new Client("http://localhost:8080", { fetch });
+const messagesClient = new Client(API_BASE_URL, { fetch });
 
 export const fetchMessages = async (groupId: string): Promise<MessageResponseDto[]> => {
   const items = await messagesClient.messagesAll(groupId, 1, 50, undefined);
