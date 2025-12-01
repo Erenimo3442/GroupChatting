@@ -4,10 +4,8 @@ namespace Application.Dtos
 {
     public class SendMessageDto
     {
-        [Required]
-        public string Content { get; set; } = string.Empty;
-
-        public string? FileUrl { get; set; } = null;
-        public string? MimeType { get; set; } = null;
+        public string? Content { get; set; }
+        public string? FileUrl { get; set; }
+        public string? MimeType { get; set; }
     }
 }

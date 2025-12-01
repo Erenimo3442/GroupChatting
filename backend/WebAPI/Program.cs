@@ -36,6 +36,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+builder.Services.AddScoped<ITempFileService, TempFileService>();
 builder.Services.AddSingleton<IMongoMessageDbService, MongoMessageDbService>();
 
 // Add services to the container.

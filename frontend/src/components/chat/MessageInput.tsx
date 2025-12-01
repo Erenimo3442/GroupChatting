@@ -6,7 +6,7 @@ import { uploadFile } from '../../services/messageService';
 // ============================================
 // We're extending the props to accept a new callback for file uploads
 interface MessageInputProps {
-    onSendMessage: (content: string) => void;
+    onSendMessage: (content: string) => Promise<void>;
     onSendFile?: (file: File) => Promise<void>; // NEW: Optional callback for file uploads
     disabled?: boolean;
     groupId?: string; // We'll need this to construct the upload URL
@@ -38,6 +38,8 @@ export default function MessageInput({
     // This prevents multiple simultaneous uploads
     const [isUploading, setIsUploading] = useState(false);
 
+    const [isSending, setIsSending] = useState(false);
+
     // ============================================
     // REF for File Input
     // ============================================
@@ -57,11 +59,19 @@ export default function MessageInput({
         e.preventDefault();
 
         if (message.trim() && !disabled && !isUploading) {
+            setIsSending(true);
             try {
+                if (selectedFile) {
+                    await handleFileUpload();
+                }
                 await onSendMessage(message.trim());
+                await handleFileUpload(); // Upload file if one is selected
                 setMessage(''); // Clear the input after sending
+                setIsSending(false);
             } catch (err) {
                 // Error is handled by the parent component
+            } finally {
+                setIsSending(false);
             }
         }
     };
@@ -170,24 +180,14 @@ export default function MessageInput({
 
                     {/* Action buttons */}
                     <div className="flex gap-2">
-                        {/* Upload button */}
-                        <button
-                            type="button"
-                            onClick={handleFileUpload}
-                            disabled={isUploading}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
-                        >
-                            {isUploading ? 'Uploading...' : 'Upload'}
-                        </button>
-
                         {/* Cancel button */}
                         <button
                             type="button"
                             onClick={handleCancelFile}
                             disabled={isUploading}
-                            className="px-4 py-2 bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                            className="px-3 py-1 bg-zinc-700 text-zinc-300 rounded-full hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
-                            Cancel
+                            X
                         </button>
                     </div>
                 </div>

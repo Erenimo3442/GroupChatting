@@ -42,7 +42,7 @@ namespace Infrastructure
             var message = new Message
             {
                 Id = Guid.NewGuid(),
-                Content = sendMessageDto.Content,
+                Content = sendMessageDto.Content ?? string.Empty,
                 GroupId = groupId,
                 UserId = senderId,
                 Timestamp = DateTime.UtcNow,

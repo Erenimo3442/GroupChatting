@@ -16,11 +16,15 @@ namespace Infrastructure.Tests
     {
         private readonly Mock<IMongoMessageDbService> _mongoMock;
         private readonly Mock<IHubContext<ChatHub>> _hubMock;
+        private readonly Mock<IFileStorageService> _fileStorageMock;
+        private readonly Mock<IGroupService> _groupServiceMock;
 
         public MessageServiceTests()
         {
             _mongoMock = new Mock<IMongoMessageDbService>();
             _hubMock = new Mock<IHubContext<ChatHub>>();
+            _fileStorageMock = new Mock<IFileStorageService>();
+            _groupServiceMock = new Mock<IGroupService>();
 
             // Setup mock for SignalR hub to avoid errors
             var mockClients = new Mock<IClientProxy>();
@@ -82,13 +86,19 @@ namespace Infrastructure.Tests
             // Get the nonMember from the setup
             var (dbContext, admin, activeMember, nonMember, group) =
                 await GetSeededDbContextAsync();
-            var service = new MessageService(_mongoMock.Object, _hubMock.Object, dbContext);
-            var dto = new SendMessageDto { GroupId = group.Id, Content = "Hello" };
+            var service = new MessageService(
+                _mongoMock.Object,
+                _hubMock.Object,
+                dbContext,
+                _fileStorageMock.Object,
+                _groupServiceMock.Object
+            );
+            var dto = new SendMessageDto { Content = "Hello" };
 
             // Act & Assert
             // Use the nonMember's Id to test the security check
-            await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-                service.SendMessageAsync(dto, nonMember.Id)
+            await Assert.ThrowsAsync<ForbiddenAccessException>(() =>
+                service.SendMessageAsync(group.Id, dto, nonMember.Id)
             );
         }
 
@@ -98,11 +108,17 @@ namespace Infrastructure.Tests
             // Arrange
             var (dbContext, admin, activeMember, nonMember, group) =
                 await GetSeededDbContextAsync();
-            var service = new MessageService(_mongoMock.Object, _hubMock.Object, dbContext);
-            var dto = new SendMessageDto { GroupId = group.Id, Content = "Hello World" };
+            var service = new MessageService(
+                _mongoMock.Object,
+                _hubMock.Object,
+                dbContext,
+                _fileStorageMock.Object,
+                _groupServiceMock.Object
+            );
+            var dto = new SendMessageDto { Content = "Hello World" };
 
             // Act
-            await service.SendMessageAsync(dto, activeMember.Id);
+            await service.SendMessageAsync(group.Id, dto, activeMember.Id);
 
             // Assert
             // Verify that the CreateAsync method on our fake MongoDB service was called exactly once.
@@ -115,10 +131,15 @@ namespace Infrastructure.Tests
             // Arrange
             var (dbContext, admin, activeMember, nonMember, group) =
                 await GetSeededDbContextAsync();
-            var service = new MessageService(_mongoMock.Object, _hubMock.Object, dbContext);
+            var service = new MessageService(
+                _mongoMock.Object,
+                _hubMock.Object,
+                dbContext,
+                _fileStorageMock.Object,
+                _groupServiceMock.Object
+            );
             var dto = new SendMessageDto
             {
-                GroupId = group.Id,
                 Content = "[File]",
                 FileUrl = "/uploads/test.jpg",
                 MimeType = "image/jpeg",
@@ -132,7 +153,7 @@ namespace Infrastructure.Tests
                 .Callback<Message>(m => capturedMessage = m);
 
             // Act
-            await service.SendMessageAsync(dto, activeMember.Id);
+            await service.SendMessageAsync(group.Id, dto, activeMember.Id);
 
             // Assert
             Assert.NotNull(capturedMessage);

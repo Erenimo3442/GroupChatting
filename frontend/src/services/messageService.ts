@@ -22,7 +22,7 @@ export const sendMessage = async (
 };
 
 export const uploadFile = async (
-  fileData: { groupId: string; file: FileParameter }
+  fileData: { groupId: string; file: FileParameter, content?: string }
 ): Promise<MessageResponseDto> => {
-  return messagesClient.upload(fileData.groupId, fileData.file);
+  return messagesClient.upload(fileData.groupId, fileData.file, fileData.content);
 }
